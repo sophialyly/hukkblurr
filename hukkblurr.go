@@ -2,28 +2,49 @@ package main
 
 import (
   "net/http"
-  "io/ioutil"
+  "text/template"
 )
 
 func main() {
-    http.Handle("/", new(MyHandler))
-
+    http.HandleFunc("/", func (w http.ResponseWriter, req *http.Request){
+            w.Header().Add("Content Type", "text/html")
+            templates := template.New("template")
+            templates.New("test").Parse(doc)
+            templates.New("header").Parse(header)
+            templates.New("footer").Parse(footer)
+            context := Context{
+                [3]string {"Lemon", "Orange", "Apple"},
+                "the title",
+              }
+                templates.Lookup("test").Execute(w, context)
+            })
     http.ListenAndServe(":8000", nil)
 }
 
-type MyHandler struct {
-    http.Handler
-}
+const doc = `
+{{template "header" .Title}}
+  <body>
+    <h1>List of Fruit</h1>
+    <ul>
+      {{range .Fruit}}
+        <li>{{.}}</li>
+      {{end}}
+    </ul>
+  </body>
+{{template "footer"}}
+`
 
-func (this *MyHandler) ServeHTTP (w http.ResponseWriter, req *http.Request) {
-    path := "public/" + req.URL.Path
-    data, err := ioutil.ReadFile(string(path))
+const header = `
+<!DOCTYPE html>
+<html>
+  <head><title>{{.}}</title></head>
 
-    if err == nil {
-      w.Write(data)
-    } else {
-      w.WriteHeader(404)
-      w.Write([]byte("404 -" + http.StatusText(404)))
-    }
+`
 
+const footer = `
+</html>
+`
+type Context struct {
+    Fruit [3]string
+    Title string
 }
